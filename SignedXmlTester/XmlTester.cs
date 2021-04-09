@@ -1,5 +1,6 @@
 using FluentAssertions;
-using TestSignedXml;
+using SignedXmlValidation;
+using SignedXmlValidation.XmlStuff;
 using Xunit;
 
 namespace SignedXmlTester

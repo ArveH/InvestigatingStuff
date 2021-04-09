@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TestSignedXml
+namespace SignedXmlValidation
 {
     class Program
     {

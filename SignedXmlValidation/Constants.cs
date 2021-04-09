@@ -1,4 +1,4 @@
-﻿namespace TestSignedXml
+﻿namespace SignedXmlValidation
 {
     public static class Constants
     {

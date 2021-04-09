@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Xml;
 
-namespace TestSignedXml
+namespace SignedXmlValidation.XmlStuff
 {
     public class Assertion : IAssertion
     {

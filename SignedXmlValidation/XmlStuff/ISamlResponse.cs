@@ -1,6 +1,6 @@
 ﻿using System.Xml;
 
-namespace TestSignedXml
+namespace SignedXmlValidation.XmlStuff
 {
     public interface ISamlResponse
     {

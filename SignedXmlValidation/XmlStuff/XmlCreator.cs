@@ -1,8 +1,6 @@
-﻿using System;
-using System.Xml;
-using Microsoft.VisualBasic;
+﻿using System.Xml;
 
-namespace TestSignedXml
+namespace SignedXmlValidation.XmlStuff
 {
     public class XmlCreator
     {
