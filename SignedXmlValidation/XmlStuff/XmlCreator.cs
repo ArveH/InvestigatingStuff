@@ -4,16 +4,7 @@ namespace SignedXmlValidation.XmlStuff
 {
     public class XmlCreator
     {
-        private ISamlResponse _samlResponse;
-        private IAssertion _assertion;
-
-        public XmlCreator()
-        {
-            _samlResponse = new SamlResponse();
-            _assertion = new Assertion();
-        }
-
-        public XmlDocument CreateXml(string id,
+        public static XmlDocument CreateXml(string id,
             string assertionId,
             string inResponseTo,
             string host,
@@ -23,9 +14,12 @@ namespace SignedXmlValidation.XmlStuff
         {
             var doc = new XmlDocument();
 
-            var responseNode = _samlResponse.CreateXml(
+            var samlResponse = new SamlResponse();
+            var assertion = new Assertion();
+
+            var responseNode = samlResponse.CreateXml(
                 doc, id, Constants.XmlElementNames.Response, inResponseTo, host, returnUrl);
-            var assertionNode = _assertion.CreateXml(
+            var assertionNode = assertion.CreateXml(
                 doc,
                 assertionId,
                 Constants.Saml.AuthResponseId,

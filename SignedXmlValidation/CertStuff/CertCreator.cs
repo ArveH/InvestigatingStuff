@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Security.Cryptography.X509Certificates;
-using Org.BouncyCastle.Asn1;
+﻿using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Pkcs;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
@@ -10,13 +7,13 @@ using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Math;
-using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
-using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
+using System;
+using System.Collections;
+using System.Security.Cryptography.X509Certificates;
 
 namespace SignedXmlValidation.CertStuff
 {
@@ -39,8 +36,8 @@ namespace SignedXmlValidation.CertStuff
             gen.SetSerialNumber(SN);
             gen.SetSubjectDN(CN);
             gen.SetIssuerDN(CN);
-            gen.SetNotAfter(DateTime.MaxValue);
-            gen.SetNotBefore(DateTime.Now.Subtract(new TimeSpan(7, 0, 0, 0)));
+            gen.SetNotAfter(DateTime.Now.AddDays(1));
+            gen.SetNotBefore(DateTime.Now.AddDays(-1));
             gen.SetPublicKey(keypair.Public);
 
             // Signature Algorithm
@@ -48,10 +45,26 @@ namespace SignedXmlValidation.CertStuff
             ISignatureFactory sigFact = new Asn1SignatureFactory(
                 signatureAlgorithm, keypair.Private);
 
+            var bcCert = gen.Generate(sigFact);
+
             var privateKeyInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(keypair.Private);
 
-            var bcCert = gen.Generate(sigFact);
-            return new X509Certificate2(bcCert.GetEncoded());
+            var asn1Seq = (Asn1Sequence)Asn1Object.FromByteArray(privateKeyInfo.ParsePrivateKey().GetDerEncoded());
+            var rsaPrivKeyStruct = RsaPrivateKeyStructure.GetInstance(asn1Seq);
+            //var rsaParams = new RsaPrivateCrtKeyParameters(
+            //    rsaPrivKeyStruct.Modulus,
+            //    rsaPrivKeyStruct.PublicExponent,
+            //    rsaPrivKeyStruct.PrivateExponent,
+            //    rsaPrivKeyStruct.Prime1,
+            //    rsaPrivKeyStruct.Prime2,
+            //    rsaPrivKeyStruct.Exponent1,
+            //    rsaPrivKeyStruct.Exponent2,
+            //    rsaPrivKeyStruct.Coefficient);
+
+            //var rsa = DotNetUtilities.ToRSA(rsaParams);
+            var rsa = DotNetUtilities.ToRSA(rsaPrivKeyStruct);
+            var x509Cert = new X509Certificate2(bcCert.GetEncoded());
+            return x509Cert.CopyWithPrivateKey(rsa);
         }
 
         public static X509Certificate2 GenerateX509Cert()
@@ -98,9 +111,8 @@ namespace SignedXmlValidation.CertStuff
                 signatureAlgorithm, rsaPrivate);
 
 
-            X509Certificate cert = certGen.Generate(sigFact);
+            var cert = certGen.Generate(sigFact);
 
-            //			Assert.IsTrue((cert.IsValidNow && cert.Verify(rsaPublic)),"Certificate failed to be valid (RSA)");
             cert.CheckValidity();
             cert.Verify(rsaPublic);
 
@@ -108,133 +120,6 @@ namespace SignedXmlValidation.CertStuff
 
             var rsa = DotNetUtilities.ToRSA(rsaPrivate);
             return x509Cert.CopyWithPrivateKey(rsa);
-
-            //Console.WriteLine(ASN1Dump.DumpAsString(cert.ToAsn1Object()));
-
-            //ISet dummySet = cert.GetNonCriticalExtensionOids();
-
-            //if (dummySet != null)
-            //{
-            //    foreach (string key in dummySet)
-            //    {
-            //        Console.WriteLine("\t{0}:\t{1}", key);
-            //    }
-            //}
-
-            //Console.WriteLine();
-
-            //dummySet = cert.GetNonCriticalExtensionOids();
-            //if (dummySet != null)
-            //{
-            //    foreach (string key in dummySet)
-            //    {
-            //        Console.WriteLine("\t{0}:\t{1}", key);
-            //    }
-            //}
-
-            //Console.WriteLine();
-        }
-
-        public static X509Certificate2 GenerateSelfSignedCertificate(
-            string subjectName, 
-            string issuerName, 
-            AsymmetricKeyParameter issuerPrivKey, 
-            int keyStrength = 2048)
-        {
-            var certificate = GetBCCert(
-                subjectName, 
-                issuerName, 
-                keyStrength, 
-                out var subjectKeyPair);
-
-            // Corresponding private key
-            var info = PrivateKeyInfoFactory.CreatePrivateKeyInfo(subjectKeyPair.Private);
-
-
-            // Merge into X509Certificate2
-            var x509 = new X509Certificate2(certificate.GetEncoded());
-
-            var seq = (Asn1Sequence)Asn1Object.FromByteArray(info.GetDerEncoded());
-            if (seq.Count != 9)
-                throw new PemException("malformed sequence in RSA private key");
-
-            var rsa = RsaPrivateKeyStructure.GetInstance(seq);
-            var rsaParams = new RsaPrivateCrtKeyParameters(
-                rsa.Modulus, 
-                rsa.PublicExponent, 
-                rsa.PrivateExponent, 
-                rsa.Prime1, 
-                rsa.Prime2, 
-                rsa.Exponent1, 
-                rsa.Exponent2, 
-                rsa.Coefficient);
-
-            x509.PrivateKey = DotNetUtilities.ToRSA(rsaParams);
-            return x509;
-        }
-
-
-        public static AsymmetricKeyParameter GenerateCACertificate(
-            string subjectName, int keyStrength = 2048)
-        {
-            var certificate = GetBCCert(
-                subjectName, 
-                subjectName, 
-                keyStrength, 
-                out var subjectKeyPair);
-
-            var x509 = new X509Certificate2(certificate.GetEncoded());
-
-            // Add CA certificate to Root store
-            //addCertToStore(cert, StoreName.Root, StoreLocation.CurrentUser);
-
-            return subjectKeyPair.Private;
-        }
-
-        private static X509Certificate GetBCCert(string subjectName, string issuerName, int keyStrength,
-            out AsymmetricCipherKeyPair subjectKeyPair)
-        {
-            // Generating Random Numbers
-            var randomGenerator = new CryptoApiRandomGenerator();
-            var random = new SecureRandom(randomGenerator);
-
-            // The Certificate Generator
-            var certificateGenerator = new X509V3CertificateGenerator();
-
-            // Serial Number
-            var serialNumber = BigIntegers.CreateRandomInRange(
-                BigInteger.One, BigInteger.ValueOf(long.MaxValue), random);
-            certificateGenerator.SetSerialNumber(serialNumber);
-
-            // Issuer and Subject Name
-            var subjectDN = new X509Name(subjectName);
-            var issuerDN = new X509Name(issuerName);
-            certificateGenerator.SetIssuerDN(issuerDN);
-            certificateGenerator.SetSubjectDN(subjectDN);
-
-            // Valid For
-            var notBefore = DateTime.UtcNow.Date;
-            var notAfter = notBefore.AddYears(2);
-
-            certificateGenerator.SetNotBefore(notBefore);
-            certificateGenerator.SetNotAfter(notAfter);
-
-            // Subject Public Key
-            var keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
-            var keyPairGenerator = new RsaKeyPairGenerator();
-            keyPairGenerator.Init(keyGenerationParameters);
-            subjectKeyPair = keyPairGenerator.GenerateKeyPair();
-
-            certificateGenerator.SetPublicKey(subjectKeyPair.Public);
-
-            // Signature Algorithm
-            const string signatureAlgorithm = "SHA256WithRSA";
-            ISignatureFactory sigFact = new Asn1SignatureFactory(
-                signatureAlgorithm, subjectKeyPair.Private);
-
-            // Selfsign certificate
-            var certificate = certificateGenerator.Generate(sigFact);
-            return certificate;
         }
     }
 }
