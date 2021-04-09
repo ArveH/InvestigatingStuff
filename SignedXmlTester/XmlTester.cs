@@ -37,7 +37,7 @@ namespace SignedXmlTester
                 "https://localhost:44300/identity/AuthServices/Acs");
             // "saml:Assertion"
             var elementName = $"{Constants.XmlNSName.Saml}:{Constants.XmlElementNames.Assertion}";
-            var x509 = CertCreator.GenerateX509Cert2();
+            var x509 = CertCreator.GenerateX509Certificate();
             doc.Sign(x509, elementId, elementName);
 
             var nsMgr = new XmlNamespaceManager(doc.NameTable);

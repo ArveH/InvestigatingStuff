@@ -9,14 +9,7 @@ namespace SignedXmlTester
         [Fact]
         public void TestCreateBC509Cert()
         {
-            var cert = CertCreator.GenerateX509Cert();
-            cert.HasPrivateKey.Should().BeTrue();
-        }
-
-        [Fact]
-        public void TestCreateBC509Cert2()
-        {
-            var cert = CertCreator.GenerateX509Cert2();
+            var cert = CertCreator.GenerateX509Certificate();
             cert.HasPrivateKey.Should().BeTrue();
         }
     }
