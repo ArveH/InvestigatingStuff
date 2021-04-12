@@ -19,11 +19,14 @@ namespace SignedXmlValidation.CertStuff
     {
         private const string SignatureAlgorithm = "SHA256WithRSA";
 
-        public static X509Certificate2 GenerateX509Certificate()
+        public static X509Certificate2 GenerateX509Certificate(string commonName)
         {
             var keyPair = GetAsymmetricCipherKeyPair();
 
             var certificateGenerator = GetX509V3CertificateGenerator(keyPair);
+            
+            // Note: There are more parameters than just commonName
+            certificateGenerator.SetSubjectAndIssuer(commonName);
 
             var bouncyCastleCertificate = GenerateBouncyCastleCertificate(
                 keyPair, certificateGenerator);
@@ -48,7 +51,6 @@ namespace SignedXmlValidation.CertStuff
         {
             var gen = new X509V3CertificateGenerator();
             gen.SetSerialNumber(BigInteger.ProbablePrime(120, new Random()));
-            gen.SetSubjectAndIssuer(commonName: "For Testing");
             gen.SetNotAfter(DateTime.Now.AddDays(1));
             gen.SetNotBefore(DateTime.Now.AddDays(-1));
             gen.SetPublicKey(keyPair.Public);
