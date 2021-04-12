@@ -1,3 +1,4 @@
+using System.Security.Cryptography.Xml;
 using FluentAssertions;
 using SignedXmlValidation;
 using SignedXmlValidation.CertStuff;
@@ -30,6 +31,14 @@ namespace SignedXmlTester
             var node = doc.SelectSingleNode("//s:X509Data", nsMgr);
             node?.FirstChild?.Name.Should().Be("X509Certificate");
         }
+
+        [Fact]
+        public void TestVerify()
+        {
+            var doc = CreateXmlDoc();
+            Sign(doc);
+        }
+
 
         private void Sign(XmlDocument doc)
         {
