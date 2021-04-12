@@ -12,7 +12,10 @@ namespace SignedXmlValidation.XmlStuff
             string audienceRestriction,
             string returnUrl)
         {
-            var doc = new XmlDocument();
+            var doc = new XmlDocument
+            {
+                PreserveWhitespace = true
+            };
 
             var samlResponse = new SamlResponse();
             var assertion = new Assertion();

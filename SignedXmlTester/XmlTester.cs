@@ -1,9 +1,13 @@
+using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using FluentAssertions;
 using SignedXmlValidation;
 using SignedXmlValidation.CertStuff;
 using SignedXmlValidation.XmlStuff;
 using System.Xml;
+using SignedXmlValidation.FromSaml.Helpers;
+using SignedXmlValidation.FromSaml.Tokens;
 using Xunit;
 
 namespace SignedXmlTester
@@ -11,6 +15,12 @@ namespace SignedXmlTester
     public class XmlTester
     {
         private readonly string elementId = "assertion-id_2021-04-09T055047.8132195Z";
+        private readonly X509Certificate2 _certificate;
+
+        public XmlTester()
+        {
+            _certificate = CertCreator.GenerateX509Certificate("For Testing");
+        }
 
         [Fact]
         public void TestXmlXCreator()
@@ -33,19 +43,30 @@ namespace SignedXmlTester
         }
 
         [Fact]
-        public void TestVerify()
+        public void TestVerifyWhenSigned()
         {
             var doc = CreateXmlDoc();
+            SecurityKeyIdentifier signingKeys = new SecurityKeyIdentifier(
+                ) ;
+                new List<X509RawDataKeyIdentifierClause>
+                {
+                    new (_certificate)
+                };
             Sign(doc);
-        }
 
+            var isSigned = doc.DocumentElement.IsSignedByAny(
+                signingKeys,
+                false,
+                "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
+            isSigned.Should().BeTrue();
+        }
 
         private void Sign(XmlDocument doc)
         {
-            // "saml:Assertion"
-            var elementName = $"{Constants.XmlNSName.Saml}:{Constants.XmlElementNames.Assertion}";
-            var x509 = CertCreator.GenerateX509Certificate("For Testing");
-            doc.Sign(x509, elementId, elementName);
+            doc.DocumentElement.Sign2(
+                _certificate, 
+                true,
+                "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
         }
 
         private XmlDocument CreateXmlDoc()
