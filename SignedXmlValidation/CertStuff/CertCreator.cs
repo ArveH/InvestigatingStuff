@@ -148,7 +148,6 @@ namespace SignedXmlValidation.CertStuff
 
             var x509 = GenerateX509WithPrivateKey(
                 keyPair, bouncyCastleCertificate);
-            AddCertToStore(x509, StoreName.Root, StoreLocation.CurrentUser);
             return x509;
         }
 

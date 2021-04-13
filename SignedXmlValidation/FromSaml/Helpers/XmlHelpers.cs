@@ -149,7 +149,7 @@ namespace SignedXmlValidation.FromSaml.Helpers
         /// been tampered with or is not valid according to the SAML spec.</exception>
         public static bool IsSignedByAny(
             this XmlElement xmlElement,
-            IEnumerable<SecurityKeyIdentifierClause> signingKeys,
+            X509Certificate2 cert,
             bool validateCertificate,
             string minimumSigningAlgorithm)
         {
@@ -169,30 +169,27 @@ namespace SignedXmlValidation.FromSaml.Helpers
 
             signedXml.LoadXml(signatureElement);
             ValidateSignedInfo(signedXml, xmlElement, minimumSigningAlgorithm);
-            VerifySignature(signingKeys, signedXml, signatureElement, validateCertificate);
+            VerifySignature(cert, signedXml, signatureElement, validateCertificate);
 
             return true;
         }
 
         private static void VerifySignature(
-            IEnumerable<SecurityKeyIdentifierClause> signingKeys,
+            X509Certificate2 cert,
             SignedXml signedXml,
             XmlElement signatureElement,
             bool validateCertificate)
         {
             FixSignatureIndex(signedXml, signatureElement);
 
-            foreach (var keyIdentifier in signingKeys)
-            {
-                var key = ((AsymmetricSecurityKey)keyIdentifier.CreateKey())
-                .GetAsymmetricAlgorithm(signedXml.SignatureMethod, false);
+            var key = cert.PublicKey.Key;
 
-                if (signedXml.CheckSignature(key))
-                {
-                    ValidateCertificate(validateCertificate, keyIdentifier);
-                    return;
-                }
+            if (signedXml.CheckSignature(key))
+            {
+                ValidateCertificate(validateCertificate, cert);
+                return;
             }
+
             var containedKey = signedXml.Signature.KeyInfo.OfType<KeyInfoX509Data>()
                 .SingleOrDefault()?.Certificates.OfType<X509Certificate2>()
                 .SingleOrDefault();
@@ -212,19 +209,19 @@ namespace SignedXmlValidation.FromSaml.Helpers
         // mysteriously start to fail when the cert expired.
         [SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "ValidateCertificates")]
         [ExcludeFromCodeCoverage]
-        private static void ValidateCertificate(bool validateCertificate, SecurityKeyIdentifierClause keyIdentifier)
+        private static void ValidateCertificate(
+            bool validateCertificate, X509Certificate2 cert)
         {
             if (validateCertificate)
             {
-                var rawCert = keyIdentifier as X509RawDataKeyIdentifierClause;
-                if (rawCert == null)
+                if (cert == null)
                 {
                     throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                         "Certificate validation enabled, but the signing key identifier is of type {0} which cannot be validated as a certificate.",
-                        keyIdentifier.GetType().Name));
+                        cert.GetType().Name));
                 }
 
-                if (!new X509Certificate2(rawCert.GetX509RawData()).Verify())
+                if (!new X509Certificate2(cert).Verify())
                 {
                     throw new InvalidSignatureException("The signature was valid, but the verification of the certificate failed. Is it expired or revoked? Are you sure you really want to enable ValidateCertificates (it's normally not needed)?");
                 }

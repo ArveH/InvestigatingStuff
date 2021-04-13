@@ -1,13 +1,10 @@
-using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Cryptography.Xml;
 using FluentAssertions;
 using SignedXmlValidation;
 using SignedXmlValidation.CertStuff;
-using SignedXmlValidation.XmlStuff;
-using System.Xml;
 using SignedXmlValidation.FromSaml.Helpers;
-using SignedXmlValidation.FromSaml.Tokens;
+using SignedXmlValidation.XmlStuff;
+using System.Security.Cryptography.X509Certificates;
+using System.Xml;
 using Xunit;
 
 namespace SignedXmlTester
@@ -46,16 +43,10 @@ namespace SignedXmlTester
         public void TestVerifyWhenSigned()
         {
             var doc = CreateXmlDoc();
-            SecurityKeyIdentifier signingKeys = new SecurityKeyIdentifier(
-                ) ;
-                new List<X509RawDataKeyIdentifierClause>
-                {
-                    new (_certificate)
-                };
             Sign(doc);
 
             var isSigned = doc.DocumentElement.IsSignedByAny(
-                signingKeys,
+                _certificate,
                 false,
                 "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
             isSigned.Should().BeTrue();
@@ -64,7 +55,7 @@ namespace SignedXmlTester
         private void Sign(XmlDocument doc)
         {
             doc.DocumentElement.Sign2(
-                _certificate, 
+                _certificate,
                 true,
                 "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
         }
