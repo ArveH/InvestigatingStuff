@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System.Security.Cryptography.X509Certificates;
+using FluentAssertions;
 using SignedXmlValidation.CertStuff;
 using Xunit;
 
@@ -7,10 +8,15 @@ namespace SignedXmlTester
     public class CertTester
     {
         [Fact]
-        public void TestCreateBC509Cert()
+        public void TestCreateCaCertificate()
         {
-            var cert = CertCreator.GenerateX509Certificate("For Testing");
-            cert.HasPrivateKey.Should().BeTrue();
+            var x509 = CertCreator.GenerateCACertificate("For Testing");
+            
+            // Add to store
+            x509.FriendlyName = "ah-root-CA";
+            CertCreator.AddCertToStore(x509, StoreName.Root, StoreLocation.CurrentUser);
+            
+            x509.HasPrivateKey.Should().BeTrue();
         }
     }
 }
