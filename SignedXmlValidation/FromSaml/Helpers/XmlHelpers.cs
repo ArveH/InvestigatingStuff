@@ -174,7 +174,7 @@ namespace SignedXmlValidation.FromSaml.Helpers
             return true;
         }
 
-        private static void VerifySignature(
+        public static void VerifySignature(
             X509Certificate2 cert,
             SignedXml signedXml,
             XmlElement signatureElement,
@@ -309,7 +309,7 @@ namespace SignedXmlValidation.FromSaml.Helpers
             }
         }
 
-        private static void ValidateReference(
+        public static void ValidateReference(
             SignedXml signedXml,
             XmlElement xmlElement,
             string mininumDigestAlgorithm)
@@ -559,7 +559,7 @@ namespace SignedXmlValidation.FromSaml.Helpers
 
         internal static readonly string[] DigestAlgorithms = GetKnownDigestAlgorithms();
 
-        internal static string GetCorrespondingDigestAlgorithm(string signingAlgorithm)
+        public static string GetCorrespondingDigestAlgorithm(string signingAlgorithm)
         {
             var matchPattern = signingAlgorithm.Substring(signingAlgorithm.LastIndexOf('-') + 1);
             string match = DigestAlgorithms.FirstOrDefault(a => a.EndsWith(
