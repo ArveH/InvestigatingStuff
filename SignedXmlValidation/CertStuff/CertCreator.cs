@@ -171,7 +171,8 @@ namespace SignedXmlValidation.CertStuff
             gen.SetNotBefore(DateTime.Now.AddDays(-1));
             gen.SetPublicKey(keyPair.Public);
 
-            gen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
+            // If CertificateAuthority=true then SKI has to be present(?)
+            //gen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
             //var ski = new SubjectKeyIdentifier(
             //    SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(keyPair.Public));
             //gen.AddExtension(X509Extensions.SubjectKeyIdentifier, false, ski);

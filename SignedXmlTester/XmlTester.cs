@@ -23,7 +23,7 @@ namespace SignedXmlTester
 
         public XmlTester()
         {
-            _certificate = CertCreator.GenerateCACertificate("For Testing");
+            _certificate = CertCreator.GenerateX509Certificate("For Testing");
         }
 
         [Fact]
@@ -60,6 +60,30 @@ namespace SignedXmlTester
         }
 
         [Fact]
+        public void VerifySignatureElementOnly_Using_CheckSignature()
+        {
+            var doc = CreateXmlDoc();
+            Sign(doc);
+
+            var xmlElement = doc.DocumentElement;
+            var signedXml = new SignedXmlWithIdFix(xmlElement);
+
+            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
+            if (signatureElement == null)
+            {
+                throw new ArgumentNullException(nameof(signatureElement));
+            }
+
+            signedXml.LoadXml(signatureElement);
+            XmlHelpers.ValidateReference(
+                signedXml, xmlElement,
+                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
+
+            var key = _certificate.PublicKey.Key;
+            signedXml.CheckSignature(key).Should().BeTrue();
+        }
+
+        [Fact]
         public void RabbitHoleTest()
         {
             var doc = CreateXmlDoc();
@@ -82,10 +106,7 @@ namespace SignedXmlTester
             X509Chain chain = new X509Chain();
             chain.ChainPolicy.ExtraStore.AddRange(BuildBagOfCerts(signedXml));
             chain.ChainPolicy.VerificationFlags |= X509VerificationFlags.AllowUnknownCertificateAuthority;
-            bool chainVerified = chain.Build(_certificate);
-
-            XmlHelpers.VerifySignature(_certificate, signedXml, signatureElement, false);
-
+            chain.Build(_certificate).Should().BeTrue();
         }
 
         private X509Certificate2Collection BuildBagOfCerts(
