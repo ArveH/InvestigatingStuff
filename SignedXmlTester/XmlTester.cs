@@ -6,6 +6,7 @@ using SignedXmlValidation.XmlStuff;
 using System;
 using System.Collections;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
@@ -60,6 +61,18 @@ namespace SignedXmlTester
         }
 
         [Fact]
+        public void VerifyAllXml_Using_CheckSignatureFails()
+        {
+            var doc = CreateXmlDoc();
+            Sign(doc);
+
+            var signedXml = new SignedXml(doc.DocumentElement);
+            var key = _certificate.PublicKey.Key;
+            Action act = () => signedXml.CheckSignature(key);
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact]
         public void VerifySignatureElementOnly_Using_CheckSignature()
         {
             var doc = CreateXmlDoc();
@@ -81,6 +94,44 @@ namespace SignedXmlTester
 
             var key = _certificate.PublicKey.Key;
             signedXml.CheckSignature(key).Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddNewLinesInX509CertificateElement_StillReturnsTrue()
+        {
+            XmlDocument doc = CreateXmlDoc();
+            Sign(doc);
+            doc = AddNewLineInSignature(doc);
+
+            var xmlElement = doc.DocumentElement;
+            var signedXml = new SignedXmlWithIdFix(xmlElement);
+
+            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
+            if (signatureElement == null)
+            {
+                throw new ArgumentNullException(nameof(signatureElement));
+            }
+
+            signedXml.LoadXml(signatureElement);
+            XmlHelpers.ValidateReference(
+                signedXml, xmlElement,
+                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
+
+            var key = _certificate.PublicKey.Key;
+            signedXml.CheckSignature(key).Should().BeTrue();
+        }
+
+        private XmlDocument AddNewLineInSignature(XmlDocument doc)
+        {
+            var xmlString = doc.OuterXml;
+            var certIndex = xmlString.IndexOf("X509Certificate", StringComparison.Ordinal);
+            xmlString = xmlString.Insert(certIndex + 50, "&#13;\n");
+            xmlString = xmlString.Insert(certIndex + 100, "&#13;\n");
+            xmlString = xmlString.Insert(certIndex + 150, "&#13;\n");
+
+            var newDoc = new XmlDocument();
+            newDoc.LoadXml(xmlString);
+            return newDoc;
         }
 
         [Fact]
