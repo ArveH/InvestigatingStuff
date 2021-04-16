@@ -78,97 +78,47 @@ namespace SignedXmlTester
             var doc = CreateXmlDoc();
             Sign(doc);
 
-            var xmlElement = doc.DocumentElement;
-            var signedXml = new SignedXmlWithIdFix(xmlElement);
-
-            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
-            if (signatureElement == null)
-            {
-                throw new ArgumentNullException(nameof(signatureElement));
-            }
-
-            signedXml.LoadXml(signatureElement);
-            XmlHelpers.ValidateReference(
-                signedXml, xmlElement,
-                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
-
-            var key = _certificate.PublicKey.Key;
-            signedXml.CheckSignature(key).Should().BeTrue();
+            CheckSignature(doc).Should().BeTrue();
         }
 
         [Fact]
-        public void AddNewLinesInSignatureValueElement_StillReturnsTrue()
+        public void AddNewLinesInSignatureValueElement_CheckSignatureTrue()
         {
             XmlDocument doc = CreateXmlDoc();
             Sign(doc);
             doc = AddNewLineInSignature(doc, "SignatureValue");
 
-            var xmlElement = doc.DocumentElement;
-            var signedXml = new SignedXmlWithIdFix(xmlElement);
-
-            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
-            if (signatureElement == null)
-            {
-                throw new ArgumentNullException(nameof(signatureElement));
-            }
-
-            signedXml.LoadXml(signatureElement);
-            XmlHelpers.ValidateReference(
-                signedXml, xmlElement,
-                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
-
-            var key = _certificate.PublicKey.Key;
-            signedXml.CheckSignature(key).Should().BeTrue();
+            CheckSignature(doc).Should().BeTrue();
         }
 
         [Fact]
-        public void AddAnythingInSignatureValueElement_StillReturnsTrue()
+        public void AddNonWhiteSpaceInSignatureValueElement_CheckSignatureFalse()
         {
             XmlDocument doc = CreateXmlDoc();
             Sign(doc);
             doc = AddAnythingInSignature(doc, "SignatureValue", "arve\n");
 
-            var xmlElement = doc.DocumentElement;
-            var signedXml = new SignedXmlWithIdFix(xmlElement);
-
-            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
-            if (signatureElement == null)
-            {
-                throw new ArgumentNullException(nameof(signatureElement));
-            }
-
-            signedXml.LoadXml(signatureElement);
-            XmlHelpers.ValidateReference(
-                signedXml, xmlElement,
-                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
-
-            var key = _certificate.PublicKey.Key;
-            signedXml.CheckSignature(key).Should().BeTrue();
+            CheckSignature(doc).Should().BeFalse();
         }
 
         [Fact]
-        public void AddNewLinesInX509CertificateElement_StillReturnsTrue()
+        public void AddSpacesInSignatureValueElement_CheckSignatureTrue()
+        {
+            XmlDocument doc = CreateXmlDoc();
+            Sign(doc);
+            doc = AddAnythingInSignature(doc, "SignatureValue", "   ");
+
+            CheckSignature(doc).Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddNewLinesInX509CertificateElement_CheckSignatureTrue()
         {
             XmlDocument doc = CreateXmlDoc();
             Sign(doc);
             doc = AddNewLineInSignature(doc, "X509Certificate");
 
-            var xmlElement = doc.DocumentElement;
-            var signedXml = new SignedXmlWithIdFix(xmlElement);
-
-            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
-            if (signatureElement == null)
-            {
-                throw new ArgumentNullException(nameof(signatureElement));
-            }
-
-            signedXml.LoadXml(signatureElement);
-            XmlHelpers.ValidateReference(
-                signedXml, xmlElement,
-                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
-
-            var key = _certificate.PublicKey.Key;
-            signedXml.CheckSignature(key).Should().BeTrue();
+            CheckSignature(doc).Should().BeTrue();
         }
 
         [Fact]
@@ -195,6 +145,26 @@ namespace SignedXmlTester
             chain.ChainPolicy.ExtraStore.AddRange(BuildBagOfCerts(signedXml));
             chain.ChainPolicy.VerificationFlags |= X509VerificationFlags.AllowUnknownCertificateAuthority;
             chain.Build(_certificate).Should().BeTrue();
+        }
+
+        private bool CheckSignature(XmlDocument doc)
+        {
+            var xmlElement = doc.DocumentElement;
+            var signedXml = new SignedXmlWithIdFix(xmlElement);
+
+            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
+            if (signatureElement == null)
+            {
+                throw new ArgumentNullException(nameof(signatureElement));
+            }
+
+            signedXml.LoadXml(signatureElement);
+            XmlHelpers.ValidateReference(
+                signedXml, xmlElement,
+                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
+
+            var key = _certificate.PublicKey.Key;
+            return signedXml.CheckSignature(key);
         }
 
         private XmlDocument AddNewLineInSignature(XmlDocument doc, string elementName)
