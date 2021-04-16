@@ -97,11 +97,11 @@ namespace SignedXmlTester
         }
 
         [Fact]
-        public void AddNewLinesInX509CertificateElement_StillReturnsTrue()
+        public void AddNewLinesInSignatureValueElement_StillReturnsTrue()
         {
             XmlDocument doc = CreateXmlDoc();
             Sign(doc);
-            doc = AddNewLineInSignature(doc);
+            doc = AddNewLineInSignature(doc, "SignatureValue");
 
             var xmlElement = doc.DocumentElement;
             var signedXml = new SignedXmlWithIdFix(xmlElement);
@@ -121,17 +121,54 @@ namespace SignedXmlTester
             signedXml.CheckSignature(key).Should().BeTrue();
         }
 
-        private XmlDocument AddNewLineInSignature(XmlDocument doc)
+        [Fact]
+        public void AddAnythingInSignatureValueElement_StillReturnsTrue()
         {
-            var xmlString = doc.OuterXml;
-            var certIndex = xmlString.IndexOf("X509Certificate", StringComparison.Ordinal);
-            xmlString = xmlString.Insert(certIndex + 50, "&#13;\n");
-            xmlString = xmlString.Insert(certIndex + 100, "&#13;\n");
-            xmlString = xmlString.Insert(certIndex + 150, "&#13;\n");
+            XmlDocument doc = CreateXmlDoc();
+            Sign(doc);
+            doc = AddAnythingInSignature(doc, "SignatureValue", "arve\n");
 
-            var newDoc = new XmlDocument();
-            newDoc.LoadXml(xmlString);
-            return newDoc;
+            var xmlElement = doc.DocumentElement;
+            var signedXml = new SignedXmlWithIdFix(xmlElement);
+
+            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
+            if (signatureElement == null)
+            {
+                throw new ArgumentNullException(nameof(signatureElement));
+            }
+
+            signedXml.LoadXml(signatureElement);
+            XmlHelpers.ValidateReference(
+                signedXml, xmlElement,
+                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
+
+            var key = _certificate.PublicKey.Key;
+            signedXml.CheckSignature(key).Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddNewLinesInX509CertificateElement_StillReturnsTrue()
+        {
+            XmlDocument doc = CreateXmlDoc();
+            Sign(doc);
+            doc = AddNewLineInSignature(doc, "X509Certificate");
+
+            var xmlElement = doc.DocumentElement;
+            var signedXml = new SignedXmlWithIdFix(xmlElement);
+
+            var signatureElement = xmlElement["Signature", SignedXml.XmlDsigNamespaceUrl];
+            if (signatureElement == null)
+            {
+                throw new ArgumentNullException(nameof(signatureElement));
+            }
+
+            signedXml.LoadXml(signatureElement);
+            XmlHelpers.ValidateReference(
+                signedXml, xmlElement,
+                XmlHelpers.GetCorrespondingDigestAlgorithm(minIncomingSignatureAlgorithm));
+
+            var key = _certificate.PublicKey.Key;
+            signedXml.CheckSignature(key).Should().BeTrue();
         }
 
         [Fact]
@@ -158,6 +195,39 @@ namespace SignedXmlTester
             chain.ChainPolicy.ExtraStore.AddRange(BuildBagOfCerts(signedXml));
             chain.ChainPolicy.VerificationFlags |= X509VerificationFlags.AllowUnknownCertificateAuthority;
             chain.Build(_certificate).Should().BeTrue();
+        }
+
+        private XmlDocument AddNewLineInSignature(XmlDocument doc, string elementName)
+        {
+            var xmlString = doc.OuterXml;
+            var originalLength = xmlString.Length;
+            var certIndex = xmlString.IndexOf(elementName, StringComparison.Ordinal);
+            xmlString = xmlString.Insert(certIndex + 50, "&#13;\n");
+            xmlString = xmlString.Insert(certIndex + 100, "&#13;\n");
+            xmlString = xmlString.Insert(certIndex + 150, "&#13;\n");
+
+            var newDoc = new XmlDocument();
+            newDoc.LoadXml(xmlString);
+            var newLength = newDoc.OuterXml.Length;
+            if (newLength <= originalLength) throw new ArgumentException("doc not changed");
+            return newDoc;
+        }
+
+        private XmlDocument AddAnythingInSignature(
+            XmlDocument doc, string elementName, string txt)
+        {
+            var xmlString = doc.OuterXml;
+            var originalLength = xmlString.Length;
+            var certIndex = xmlString.IndexOf(elementName, StringComparison.Ordinal);
+            xmlString = xmlString.Insert(certIndex + 50, txt);
+            xmlString = xmlString.Insert(certIndex + 100, txt);
+            xmlString = xmlString.Insert(certIndex + 150, txt);
+
+            var newDoc = new XmlDocument();
+            newDoc.LoadXml(xmlString);
+            var newLength = newDoc.OuterXml.Length;
+            if (newLength <= originalLength) throw new ArgumentException("doc not changed");
+            return newDoc;
         }
 
         private X509Certificate2Collection BuildBagOfCerts(
